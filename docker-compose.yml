@@ -1,0 +1,24 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file: .env.example
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+      - ./var:/app/var
+    command: >-
+      uvicorn sacp_suite.api.main:app --host 0.0.0.0 --port 8000
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    env_file: .env.example
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./:/app
+    command: python -m sacp_suite.ui.app

@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+.env
+.dist/
+dist/
+build/
+
+# UI artifacts
+*.map
+
+# OS
+.DS_Store
+
+# Local data / uploads
+var/
