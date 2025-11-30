@@ -1,0 +1,65 @@
+[
+  {
+    "id": "hr_I1.00",
+    "name": "Hindmarsh-Rose I=1.00",
+    "description": "Chaotic Hindmarsh-Rose trajectory with applied current 1.00.",
+    "path": "datasets/strange_attractors/hr_I1.00.csv",
+    "columns": ["t", "x", "y", "z"],
+    "count_hint": 7400000,
+    "source": "Strange_Attractor_Datasets"
+  },
+  {
+    "id": "hr_I1.20",
+    "name": "Hindmarsh-Rose I=1.20",
+    "description": "Chaotic Hindmarsh-Rose trajectory with applied current 1.20.",
+    "path": "datasets/strange_attractors/hr_I1.20.csv",
+    "columns": ["t", "x", "y", "z"],
+    "count_hint": 7500000,
+    "source": "Strange_Attractor_Datasets"
+  },
+  {
+    "id": "lorenz_single",
+    "name": "Lorenz-63 single run",
+    "description": "Single Lorenz-63 trajectory (classic parameters).",
+    "path": "datasets/strange_attractors/lorenz_single_run.csv",
+    "columns": ["t", "x", "y", "z"],
+    "count_hint": 10000,
+    "source": "Strange_Attractor_Datasets"
+  },
+  {
+    "id": "lorenz_sweep",
+    "name": "Lorenz-63 rho sweep",
+    "description": "Lorenz-63 trajectories for a sweep of rho values.",
+    "path": "datasets/strange_attractors/lorenz_parameter_sweep.csv",
+    "columns": ["rho", "t", "x", "y", "z"],
+    "count_hint": 160000,
+    "source": "Strange_Attractor_Datasets"
+  },
+  {
+    "id": "rossler_c5",
+    "name": "Rossler c=5.00",
+    "description": "Rossler attractor sample at parameter c=5.00.",
+    "path": "datasets/strange_attractors/rossler_c5.00.csv",
+    "columns": ["t", "x", "y", "z"],
+    "count_hint": 10000,
+    "source": "Strange_Attractor_Datasets"
+  },
+  {
+    "id": "sample_embedded",
+    "name": "Sample signal embedded",
+    "description": "Synthetic sine wave with noise, time-delay embedded.",
+    "path": "datasets/strange_attractors/sample_signal_embedded.csv",
+    "columns": ["x1", "x2", "x3"],
+    "count_hint": 9000,
+    "source": "Strange_Attractor_Datasets"
+  },
+  {
+    "id": "synthetic_embedded",
+    "name": "Synthetic signal embedded",
+    "description": "Embedded synthetic signal (utility sample).",
+    "path": "datasets/strange_attractors/synthetic_signal_embedded.csv",
+    "columns": ["x1", "x2", "x3"],
+    "count_hint": 9000,
+    "source": "Strange_Attractor_Datasets"
+  }
+]

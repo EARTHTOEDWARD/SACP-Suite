@@ -1,0 +1,32 @@
+#!/bin/bash
+set -euo pipefail
+
+# Resolve repo root relative to the .app bundle.
+PROJECT_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+
+# Prefer the local venv's interpreter if available, else fall back to system python3.
+if [ -x "$PROJECT_ROOT/.venv/bin/python" ]; then
+    PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+else
+    PYTHON_BIN="$(command -v python3 || true)"
+fi
+
+if [ -z "${PYTHON_BIN:-}" ]; then
+    /usr/bin/osascript -e 'display dialog "python3 not found. Install Python 3.10+ or create .venv/." buttons {"OK"} default button 1 with icon caution'
+    exit 1
+fi
+
+PROJECT_ROOT_ESCAPED=$(printf '%q' "$PROJECT_ROOT")
+PYTHON_ESCAPED=$(printf '%q' "$PYTHON_BIN")
+LAUNCH_COMMAND="cd $PROJECT_ROOT_ESCAPED && $PYTHON_ESCAPED -m sacp_suite.ui.app"
+
+/usr/bin/osascript <<EOF_APPLESCRIPT
+ tell application "Terminal"
+     activate
+     do script "$LAUNCH_COMMAND"
+ end tell
+EOF_APPLESCRIPT
+
+# Give the server a head start, then open the default browser.
+sleep 2
+open "http://127.0.0.1:8050" >/dev/null 2>&1 &

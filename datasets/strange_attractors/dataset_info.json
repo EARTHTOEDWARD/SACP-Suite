@@ -1,0 +1,61 @@
+{
+  "lorenz_single_run": {
+    "description": "Single Lorenz-63 trajectory",
+    "system": "Lorenz-63",
+    "parameters": {
+      "sigma": 10.0,
+      "rho": 28.0,
+      "beta": 2.6666666666666665
+    },
+    "initial_state": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "time_span": [
+      0,
+      40
+    ],
+    "n_points": 10000
+  },
+  "lorenz_parameter_sweep": {
+    "description": "Lorenz-63 system with varying rho parameter",
+    "system": "Lorenz-63",
+    "swept_parameter": "rho",
+    "parameter_range": [
+      10.0,
+      40.0
+    ],
+    "n_parameter_values": 16,
+    "fixed_parameters": {
+      "sigma": 10.0,
+      "beta": 2.6666666666666665
+    },
+    "initial_state": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "time_span": [
+      0,
+      40
+    ],
+    "n_points_per_trajectory": 10000,
+    "total_points": 160000
+  },
+  "sample_signal_embedded": {
+    "description": "Time-delay embedded sample signal",
+    "source": "Synthetic sine wave with noise",
+    "original_signal": {
+      "duration_s": 10.0,
+      "sampling_rate_hz": 1000.0,
+      "frequency_hz": 5.0,
+      "noise_level": 0.2
+    },
+    "embedding": {
+      "tau": 20,
+      "embedding_dimension": 3,
+      "embedded_points": 9960
+    }
+  }
+}

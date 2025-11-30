@@ -1,0 +1,12 @@
+sufficiency_thresholds:
+  minimal: 500
+  recommended: 100000
+  large: 250000
+bands:
+  minimal: "Minimal"
+  recommended: "Recommended"
+  large: "Large"
+messages:
+  minimal: "We can chart quick plots, but expect noisy metrics."
+  recommended: "Ideal range for chaos indicators and attractor geometry."
+  large: "Plenty of data — we will window/subsample automatically."

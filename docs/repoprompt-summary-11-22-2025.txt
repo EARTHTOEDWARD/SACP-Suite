@@ -1,0 +1,42 @@
+SACP Suite overview — repoprompt summary (11/22/2025)
+
+Backend FastAPI (src/sacp_suite/api/main.py)
+- Endpoints: /health lists registry models; /simulate uses registry.create_dynamics (Lorenz63) to RK4 simulate with params T/dt; /metrics/lle calls rosenstein_lle; /operator/build builds Ulam matrix from x,z; /operator/analyze returns lambda2, abs_lambda2 (clamped to [0,1]), gamma, v2_field; /gate/sweep gates matrix via alpha using left_right_gate; /fractalllm/process returns reservoir sample from text; /dcrc/run synthesizes sin-based trajectories plus DCRC_Bank preds; /bcp/section sections (x,z) points; /abtc/integrate RK4 integrates Lorenz via sacp_x; /datasets list manifest+uploads; /datasets/preview loads limited CSV rows; /datasets/upload base64 CSV -> saved under var/uploads/datasets.
+- Pydantic models defined inline; _bool_env for reload flag; CORS optional via SACP_CORS; console entry sacp-suite-api runs run() wrapper.
+
+Core (src/sacp_suite/core)
+- plugin_api.py: BaseDynamics abstract (get_default_params, default_state, derivative, name, state_labels), RK4 step rk4_step, simulate(T, dt, x0). PluginRegistry with register/list/create; global registry.
+- datasets.py: DatasetInfo dataclass; ROOT resolves repo root; manifest path fallback; list_datasets merges manifest + uploads; preview_dataset reads CSV with limit; UPLOADS_DIR/UPLOADS_MANIFEST; register_upload writes CSV and updates uploads.json.
+
+Modules
+- sacp_x/lorenz63.py: Dynamics plugin registered as "lorenz63"; default params sigma=10, rho=28, beta=8/3; derivative, labels ["X","Y","Z"].
+- sacp_x/metrics.py: rosenstein_lle(series, m=6, tau=4) embedding, neighbor exclusion window ±10, kmax≤50; returns non-negative slope else 0.
+- attractorhedron/operator.py: build_ulam(points,nx,ny,bounds) quantile bounds default, row-stochastic transition counts; analyze_operator(P,mean_return,nx,ny) eig of P^T, clamp lambda2 finite, gamma=-ln(|λ2|)/mean_return, v2 reshaped ny×nx; left_right_gate attenuates cross-half transitions by alpha then renormalizes rows.
+- fractal_llm/reservoir.py: RCAttractorMem reservoir with Win/Wres, train_batch (Ridge readout), recall, switch; generate_reservoir_sample(text,n_res,coupling) trains on two synthetic attractors, recalls index hash, produces trajectory and switch.
+- fractal_llm/memory.py: SemanticMemory wrapper over pybloom-live BloomFilter.
+- dcrc/core.py: SinusoidalMap step/iterate; DCRC encodes inputs with shared matrix, iterates map, flattens features, Ridge readout; predict/fit.
+- dcrc/bank.py: DCRC_Bank with n_maps variations, custom projection per map, concatenated features, Ridge readout; alias DCRCBank.
+- bcp/interface.py: Recording dataclass; to_section validates (N,2) and returns first two cols.
+- abtc/core.py: Generic rk4 integrator returning trajectory.
+
+UI (src/sacp_suite/ui/app.py)
+- Dash app with pages: Home; Simulator (calls /simulate then /metrics/lle on X, can show shared traj, upload CSV -> LLE); Attractorhedron (build/analyze operator from last traj); Fractal LLM (uses shared traj if present else /fractalllm/process); DCRC (plots synthetic trajectories, network graph, overlays shared traj); BCP (sections shared or sample curve via /bcp/section); ABTC (plots shared or /abtc/integrate RK4); Datasets (load list from /datasets, preview via /datasets/preview with scatter/table, send previewed traj to other pages; upload dataset to /datasets/upload). Shared trajectory stored on server.last_traj and dcc.Store shared_traj.
+- Uses Plotly graphs; requests API at host/port from env (SACP_BIND/SACP_PORT). Layout wrappers with NAV bar; callbacks defined per page.
+
+Data
+- datasets/manifest.json lists bundled CSVs (HR I=1.00/1.20, Lorenz single/sweep, Rossler c=5, sample_embedded, synthetic_embedded) with columns/counts; datasets/strange_attractors/dataset_info.json adds descriptions/params; README documents datasets. CSV contents not included here.
+- Uploads saved to var/uploads/datasets; gitignored via .gitignore and .env.example sets SACP_DATA_DIR=var/uploads.
+
+Infrastructure
+- pyproject.toml: project sacp-suite; optional extras api/ui/all; deps: fastapi, uvicorn, pydantic, numpy, scipy, pandas, scikit-learn, plotly, dash, requests, python-multipart, pybloom-live. Console scripts sacp-suite-api, sacp-suite-ui.
+- Makefile: install (.[all]), api (uvicorn with env), ui (python -m sacp_suite.ui.app), fmt (black/isort), test (pytest -q), compose targets.
+- Dockerfile.api/ui and docker-compose.yml for deploying API/UI services; volumes mount repo, var dir persisted; .env.example for defaults.
+- Tests: tests/test_smoke.py runs Lorenz63 simulation via registry and operator build/analyze pipeline expecting shapes and |lambda2| bounds.
+
+Relationships and usage
+- api/main imports sacp_x.lorenz63 to register plugin; UI simulator uses /simulate and /metrics/lle; Attractorhedron page hits /operator/build and /operator/analyze; dataset page previews -> shares traj to other pages; DCRC uses DCRC_Bank; ABTC uses rk4 + Lorenz63 derivative; BCP uses to_section; Fractal LLM uses generate_reservoir_sample.
+
+Caveats/notes
+- Dataset CSV contents absent; ensure var/uploads exists at runtime. Rosenstein LLE returns 0 for short series or non-finite slope; operator analysis clamps non-finite lambda2. Ulam bounds use quantiles 1–99% unless provided.
+
+<chatName="SACP Suite overview">

@@ -21,7 +21,10 @@ dependencies = [
   "plotly>=5.24",
   "dash>=2.16",
   "requests>=2.32",
-  "python-multipart>=0.0.9"
+  "pyyaml>=6.0",
+  "python-multipart>=0.0.9",
+  "pybloom-live>=4.0.0",
+  "SQLAlchemy>=2.0"
 ]
 
 [project.optional-dependencies]
@@ -32,6 +35,7 @@ api = [
   "scipy>=1.12",
   "pandas>=2.2",
   "scikit-learn>=1.4",
+  "pyyaml>=6.0",
   "python-multipart>=0.0.9"
 ]
 ui = [
@@ -50,7 +54,9 @@ all = [
   "plotly>=5.24",
   "dash>=2.16",
   "requests>=2.32",
-  "python-multipart>=0.0.9"
+  "pyyaml>=6.0",
+  "python-multipart>=0.0.9",
+  "pybloom-live>=4.0.0"
 ]
 
 [project.scripts]

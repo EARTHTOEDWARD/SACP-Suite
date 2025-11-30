@@ -31,6 +31,14 @@ sacp-suite-ui
 # UI : http://127.0.0.1:8050
 ```
 
+### macOS launch icon
+
+- Double-click `macos/SACP Suite Launcher.app` to open a Terminal window that runs `python -m sacp_suite.ui.app` (it prefers `.venv/bin/python` when present).
+- The launcher waits a couple seconds and opens your default browser to `http://127.0.0.1:8050`.
+- Drag the `.app` into your Dock or copy it to `/Applications` if you want a permanent icon.
+- Customize host/port via the usual `SACP_UI_HOST`/`SACP_UI_PORT` env vars before launching (or edit the script inside `Contents/MacOS/`).
+- Finder may prompt the first time because the bundle is locally created; right-click → Open to approve it once.
+
 ### Monorepo layout
 
 ```
