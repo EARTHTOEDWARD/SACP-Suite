@@ -15,14 +15,23 @@ body {
   font-family: "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
 }
 
-nav a {
-  color: var(--nav);
-  font-weight: 600;
-  text-decoration: none;
-  margin-right: 12px;
+.sacp-navbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--border);
 }
 
-nav a:hover {
+.sacp-navbar .nav-link {
+  color: var(--nav);
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-decoration: none;
+  padding: 4px 0;
+}
+
+.sacp-navbar .nav-link:hover {
   color: var(--accent);
   text-decoration: underline;
 }
