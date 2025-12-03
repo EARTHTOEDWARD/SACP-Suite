@@ -17,6 +17,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from sacp_suite.api.v1 import auth, datasets as v1_datasets, jobs as v1_jobs, workspaces
+from sacp_suite.api.v1 import chemistry
+from sacp_suite.api.v1 import frac_chem_sprott
 from sacp_suite.core.datasets import list_datasets, preview_dataset, register_upload
 from sacp_suite.core.plugin_api import registry
 from sacp_suite.modules.abtc.core import rk4
@@ -79,6 +81,8 @@ app.include_router(auth.router)
 app.include_router(workspaces.router)
 app.include_router(v1_datasets.router)
 app.include_router(v1_jobs.router)
+app.include_router(chemistry.router, prefix="/api/v1")
+app.include_router(frac_chem_sprott.router, prefix="/api/v1")
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 INGESTION_CONFIG_PATH = ROOT_DIR / "configs" / "ingestion.yaml"
@@ -336,6 +340,42 @@ class ABTCRequest(BaseModel):
     steps: int = 200
 
 
+class ADRKrebsRunRequest(BaseModel):
+    alpha: float = 1.0
+    n_steps: int = Field(default=20000, ge=10)
+    log_every: int = Field(default=10, ge=1)
+    dt: float = 0.01
+    seed: Optional[int] = None
+
+
+class ADRKrebsRunResult(BaseModel):
+    time: List[float]
+    x: List[List[float]]
+    v: List[List[float]]
+    r: List[List[float]]
+    k: List[List[float]]
+    S_ring: float
+    diag: Dict[str, Any]
+    site_names: List[str]
+
+
+class ADRKrebsScanRequest(BaseModel):
+    alpha_min: float = 0.4
+    alpha_max: float = 1.8
+    n_alpha: int = Field(default=40, ge=2)
+    n_steps_transient: int = Field(default=15000, ge=100)
+    n_steps_sample: int = Field(default=15000, ge=100)
+    sample_every: int = Field(default=10, ge=1)
+    sample_site: int = Field(default=0, ge=0, le=3)
+    dt: float = 0.01
+
+
+class ADRKrebsScanResult(BaseModel):
+    alphas: List[float]
+    samples: List[float]
+    site: int
+
+
 class DatasetPreviewRequest(BaseModel):
     dataset_id: str
     limit: int = 1000
@@ -508,6 +548,60 @@ def simulate(req: SimRequest):
     traj = dyn.simulate(T=req.T, dt=req.dt)
     t = [i * req.dt for i in range(traj.shape[0])]
     return {"time": t, "trajectory": traj.tolist(), "labels": dyn.state_labels}
+
+
+def _load_krebs_mod():
+    """Lazy-import ADR–Krebs to avoid startup failures if chemistry stack is broken."""
+    # Importing the chemistry package registers plugins with the registry.
+    from sacp_suite.modules import chemistry as _chemistry_plugins  # noqa: F401
+    from sacp_suite.modules.chemistry import adr_krebs as krebs_mod  # type: ignore
+
+    return krebs_mod
+
+
+@app.post("/chem/adr-krebs/run", response_model=ADRKrebsRunResult)
+def run_adr_krebs(req: ADRKrebsRunRequest):
+    krebs_mod = _load_krebs_mod()
+    cfg = krebs_mod.KrebsADRConfig(dt=req.dt, seed=req.seed)
+    _, log, S_ring, diag = krebs_mod.run_krebs_trajectory(
+        alpha=req.alpha,
+        n_steps=req.n_steps,
+        log_every=req.log_every,
+        cfg=cfg,
+    )
+    diag_out: Dict[str, Any] = {}
+    for key, val in diag.items():
+        if isinstance(val, (list, tuple, np.ndarray)):
+            diag_out[key] = np.asarray(val).tolist()
+        else:
+            diag_out[key] = float(val)
+
+    return {
+        "time": np.asarray(log["time"]).tolist(),
+        "x": np.asarray(log["x"]).tolist(),
+        "v": np.asarray(log["v"]).tolist(),
+        "r": np.asarray(log["r"]).tolist(),
+        "k": np.asarray(log["k"]).tolist(),
+        "S_ring": float(S_ring),
+        "diag": diag_out,
+        "site_names": krebs_mod.SITE_NAMES,
+    }
+
+
+@app.post("/chem/adr-krebs/scan", response_model=ADRKrebsScanResult)
+def scan_adr_krebs(req: ADRKrebsScanRequest):
+    krebs_mod = _load_krebs_mod()
+    alphas = np.linspace(req.alpha_min, req.alpha_max, req.n_alpha)
+    cfg = krebs_mod.KrebsADRConfig(dt=req.dt)
+    a_vals, x_vals = krebs_mod.krebs_bifurcation_scan(
+        alpha_values=alphas,
+        n_steps_transient=req.n_steps_transient,
+        n_steps_sample=req.n_steps_sample,
+        sample_every=req.sample_every,
+        cfg=cfg,
+        sample_site=req.sample_site,
+    )
+    return {"alphas": a_vals.tolist(), "samples": x_vals.tolist(), "site": req.sample_site}
 
 
 @app.post("/metrics/lle")
@@ -929,3 +1023,7 @@ def run() -> None:
     host = os.getenv("SACP_BIND", "127.0.0.1")
     port = int(os.getenv("SACP_PORT", "8000"))
     uvicorn.run("sacp_suite.api.main:app", host=host, port=port, reload=_bool_env("SACP_RELOAD", True))
+
+
+if __name__ == "__main__":
+    run()
