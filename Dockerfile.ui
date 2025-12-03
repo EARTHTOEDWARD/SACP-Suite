@@ -1,8 +1,0 @@
-FROM python:3.11-slim
-WORKDIR /app
-COPY pyproject.toml /app/pyproject.toml
-RUN pip install -U pip && pip install -e ".[ui]"
-COPY src /app/src
-ENV SACP_UI_HOST=0.0.0.0 SACP_UI_PORT=8050
-EXPOSE 8050
-CMD ["python", "-m", "sacp_suite.ui.app"]
