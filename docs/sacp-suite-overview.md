@@ -14,7 +14,7 @@ SACP Suite is a unified platform that bundles several chaos-analysis tools into 
   - `abtc/` – Attractor-Based Trajectory Calculator stubs and shared integrators.
   - `maes/` – Reserved for future expansions.
 - `tests/` – Smoke tests for simulations and operator analysis.
-- Root files: `pyproject.toml`, `Makefile`, `docker-compose.yml`, `.env.example`, and deployment Dockerfiles.
+- Root files: `pyproject.toml`, `Makefile`, `.env.example`.
 
 All components live in a single package/version; modules under `modules/` auto-register themselves so the suite can be extended by simply adding new directories.
 
@@ -25,7 +25,7 @@ Console scripts (declared in `pyproject.toml`) are the standard entry points:
 - `sacp-suite-api` → runs `sacp_suite.api.main:run()` via Uvicorn and exposes FastAPI (defaults to `127.0.0.1:8000`).
 - `sacp-suite-ui` → runs `sacp_suite.ui.app:main()` and serves the Dash UI (defaults to `127.0.0.1:8050`).
 
-For development there are `make api`, `make ui`, and a `docker-compose.yml` stack that launches API and UI together. The API binds to localhost unless `SACP_BIND=0.0.0.0` is set. CORS is disabled until `SACP_CORS` lists allowed origins. FastAPI ships Swagger docs at `http://127.0.0.1:8000/docs`; Dash lives at `http://127.0.0.1:8050`.
+For development there are `make api` and `make ui` helpers to launch API and UI together. The API binds to localhost unless `SACP_BIND=0.0.0.0` is set. CORS is disabled until `SACP_CORS` lists allowed origins. FastAPI ships Swagger docs at `http://127.0.0.1:8000/docs`; Dash lives at `http://127.0.0.1:8050`.
 
 ## Core Plugin Framework (`sacp_suite/core/plugin_api.py`)
 

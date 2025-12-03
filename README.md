@@ -5,7 +5,7 @@ A ready-to-push starter repository that unifies **SACP**, **BCP**, **ABTC**, **M
 - **Backend API:** FastAPI (unified, versioned API across modules)
 - **UI:** Dash multi-page app (clean navigation, per-module pages)
 - **Core:** Plugin architecture (dynamics, metrics, controllers), Attractorhedron operator service, ABTC stubs
-- **Cloud:** Docker Compose + Make targets; stateless API; file uploads via local disk (S3-ready)
+- **Cloud:** Local-first (no Docker); stateless API; file uploads via local disk (S3-ready)
 - **Local Dev:** `uv`/pip, Python 3.11+
 
 > This repo is designed to be **private**. It exposes capabilities via an **API**; distribution of binaries is not required.
@@ -54,7 +54,7 @@ sacp-suite-starter/
 │   │   └── maes/                   # MAES/ST placeholders (future)
 │   └── ui/                         # Dash multi-page application
 ├── tests/                          # Smoke tests
-├── docker-compose.yml              # Cloud-friendly dev deployment
+├── (docker artifacts removed)
 ├── Makefile                        # Developer commands
 ├── .env.example                    # Config
 ├── .gitignore

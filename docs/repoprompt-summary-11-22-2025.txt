@@ -30,7 +30,7 @@ Data
 Infrastructure
 - pyproject.toml: project sacp-suite; optional extras api/ui/all; deps: fastapi, uvicorn, pydantic, numpy, scipy, pandas, scikit-learn, plotly, dash, requests, python-multipart, pybloom-live. Console scripts sacp-suite-api, sacp-suite-ui.
 - Makefile: install (.[all]), api (uvicorn with env), ui (python -m sacp_suite.ui.app), fmt (black/isort), test (pytest -q), compose targets.
-- Dockerfile.api/ui and docker-compose.yml for deploying API/UI services; volumes mount repo, var dir persisted; .env.example for defaults.
+- Docker artifacts removed; configure via `.env.example` and run locally with the launcher or Python entrypoints.
 - Tests: tests/test_smoke.py runs Lorenz63 simulation via registry and operator build/analyze pipeline expecting shapes and |lambda2| bounds.
 
 Relationships and usage
