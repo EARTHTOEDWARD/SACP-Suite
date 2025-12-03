@@ -735,6 +735,150 @@ def run_two_ring_synergy_experiment() -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# EFE-like scan over inter-ring coupling (risk + ambiguity - epistemic + cost)
+# ---------------------------------------------------------------------------
+
+
+def lag1_autocorr(x: np.ndarray) -> float:
+    """Lag-1 autocorrelation of a 1D series."""
+    x = x - x.mean()
+    if x.size < 2:
+        return 0.0
+    x0 = x[:-1]
+    x1 = x[1:]
+    denom = np.linalg.norm(x0) * np.linalg.norm(x1)
+    if denom == 0.0:
+        return 0.0
+    return float(np.dot(x0, x1) / denom)
+
+
+def evaluate_efe_for_k(
+    k_inter: float,
+    params: ADRParams,
+    T: float,
+    dt: float,
+    burn_in: float,
+    probe_fn: Callable[[float], float],
+    E_iso: float,
+    alpha_risk: float = 1.0,
+    beta_amb: float = 1.0,
+    gamma_epi: float = 1.0,
+    lambda_k: float = 0.1,
+    seed: int = 123,
+) -> Dict[str, Any]:
+    """
+    Run the two-ring ADR system at a given k_inter and compute an EFE-like scalar:
+      G = alpha_risk * risk + beta_amb * ambiguity - gamma_epi * epistemic + lambda_k * k_inter^2
+    risk      ~ external energy per unit time with a shared buffer
+    ambiguity ~ 1 - |lag-1 autocorr| of the mixed ring readout
+    epistemic ~ MI(probe, mixed readout)
+    """
+    t, probe, x1, x2, v_both = simulate_two_rings(
+        params,
+        T=T,
+        dt=dt,
+        probe_fn=probe_fn,
+        k_inter=k_inter,
+        burn_in=burn_in,
+        seed=seed,
+    )
+    dt_eff = t[1] - t[0]
+    T_eff = t[-1] - t[0]
+
+    P1, P2 = power_series_from_velocities(v_both, params.gamma)
+    E_ext, R_series = energy_with_shared_buffer(P1, P2, dt=dt_eff, alpha_dep=0.2, alpha_wdr=0.5)
+
+    risk = E_ext / max(T_eff, 1e-9)
+    ring1_mean = x1.mean(axis=1)
+    ring2_mean = x2.mean(axis=1)
+    y_mix = 0.5 * (ring1_mean + ring2_mean)
+    ac1 = lag1_autocorr(y_mix)
+    ambiguity = 1.0 - abs(ac1)
+    epistemic = mutual_information_hist(probe, y_mix)
+    cost_k = k_inter**2
+    G = alpha_risk * risk + beta_amb * ambiguity - gamma_epi * epistemic + lambda_k * cost_k
+    S_E = (E_iso - E_ext) / (E_iso + 1e-12)
+
+    return {
+        "k_inter": k_inter,
+        "G": G,
+        "risk": risk,
+        "ambiguity": ambiguity,
+        "epistemic": epistemic,
+        "cost_k": cost_k,
+        "E_ext": E_ext,
+        "S_E": S_E,
+        "MI_mix": epistemic,
+        "ac1": ac1,
+        "R_final": float(R_series[-1]),
+    }
+
+
+def run_two_ring_efe_scan(
+    k_values: Optional[np.ndarray] = None,
+    alpha_risk: float = 1.0,
+    beta_amb: float = 0.5,
+    gamma_epi: float = 1.0,
+    lambda_k: float = 0.1,
+) -> Dict[str, Any]:
+    """
+    Scan k_inter for the two-ring ADR plant and evaluate an EFE-like objective:
+      G(k) = alpha_risk * risk + beta_amb * ambiguity - gamma_epi * epistemic + lambda_k * k^2
+    Returns summary dict with best k and all results.
+    """
+    N = 16
+    dt = 0.01
+    T = 200.0
+    burn_in = 50.0
+    f0 = 0.15
+    amp = 0.2
+
+    def probe_fn(t: float) -> float:
+        return amp * math.sin(2.0 * math.pi * f0 * t)
+
+    params = ADRParams(
+        N=N,
+        a=1.0 * np.ones(N),
+        gamma=0.2 * np.ones(N),
+        kappa=0.25,
+        eta=0.4,
+        mu=1.0,
+        sigma=0.5,
+    )
+
+    t_iso, probe_iso, x1_iso, x2_iso, v_iso = simulate_two_rings(
+        params, T=T, dt=dt, probe_fn=probe_fn, k_inter=0.0, burn_in=burn_in, seed=1
+    )
+    dt_eff = t_iso[1] - t_iso[0]
+    P1_iso, P2_iso = power_series_from_velocities(v_iso, params.gamma)
+    E_iso = energy_baseline_isolated(P1_iso, P2_iso, dt_eff)
+
+    if k_values is None:
+        k_values = np.linspace(0.0, 0.5, 11)[1:]  # skip zero; already have baseline
+
+    results = [
+        evaluate_efe_for_k(
+            k_inter=float(k),
+            params=params,
+            T=T,
+            dt=dt,
+            burn_in=burn_in,
+            probe_fn=probe_fn,
+            E_iso=E_iso,
+            alpha_risk=alpha_risk,
+            beta_amb=beta_amb,
+            gamma_epi=gamma_epi,
+            lambda_k=lambda_k,
+            seed=42,
+        )
+        for k in k_values
+    ]
+
+    best = min(results, key=lambda r: r["G"])
+    return {"E_iso": E_iso, "results": results, "best": best}
+
+
+# ---------------------------------------------------------------------------
 # Plugin wrapper so ADR ring is available via the registry
 # ---------------------------------------------------------------------------
 
@@ -789,4 +933,3 @@ class ADRRingDynamics(BaseDynamics):
 
 
 registry.register_dynamics("adr_ring", ADRRingDynamics)
-
