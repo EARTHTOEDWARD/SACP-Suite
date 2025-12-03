@@ -62,6 +62,7 @@ all = [
 [project.scripts]
 sacp-suite-api = "sacp_suite.api.main:run"
 sacp-suite-ui = "sacp_suite.ui.app:main"
+sacp-suite = "sacp_suite.ui.app:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
