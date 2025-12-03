@@ -1,32 +1,82 @@
 #!/bin/bash
 set -euo pipefail
 
-# Resolve repo root relative to the .app bundle.
-PROJECT_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# Allow override for non-default install paths; default stays in $HOME/SACP SUITE.
+PROJECT_ROOT="${SACP_SUITE_ROOT:-$HOME/SACP SUITE}"
+LOG_DIR="${TMPDIR:-/tmp}"
+API_LOG="$LOG_DIR/sacp_api.log"
+UI_LOG="$LOG_DIR/sacp_ui.log"
 
-# Prefer the local venv's interpreter if available, else fall back to system python3.
-if [ -x "$PROJECT_ROOT/.venv/bin/python" ]; then
-    PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
-else
-    PYTHON_BIN="$(command -v python3 || true)"
-fi
+alert() {
+    /usr/bin/osascript -e 'display dialog "'"$1"'" buttons {"OK"} default button 1 with icon caution'
+}
 
-if [ -z "${PYTHON_BIN:-}" ]; then
-    /usr/bin/osascript -e 'display dialog "python3 not found. Install Python 3.10+ or create .venv/." buttons {"OK"} default button 1 with icon caution'
+if [ ! -f "$PROJECT_ROOT/pyproject.toml" ] || [ ! -d "$PROJECT_ROOT/src/sacp_suite" ]; then
+    alert "Could not locate the SACP Suite repo at \"$PROJECT_ROOT\". Set SACP_SUITE_ROOT if you moved it."
     exit 1
 fi
 
-PROJECT_ROOT_ESCAPED=$(printf '%q' "$PROJECT_ROOT")
-PYTHON_ESCAPED=$(printf '%q' "$PYTHON_BIN")
-LAUNCH_COMMAND="cd $PROJECT_ROOT_ESCAPED && $PYTHON_ESCAPED -m sacp_suite.ui.app"
+# Always run from the repo root so editable installs resolve correctly.
+cd "$PROJECT_ROOT"
 
-/usr/bin/osascript <<EOF_APPLESCRIPT
- tell application "Terminal"
-     activate
-     do script "$LAUNCH_COMMAND"
- end tell
-EOF_APPLESCRIPT
+# Ensure we have a venv and a recent pip, then install deps if imports fail.
+if [ ! -x ".venv/bin/python" ]; then
+    PY_CMD="$(command -v python3 || true)"
+    if [ -z "$PY_CMD" ]; then
+        alert "python3 not found. Install Python 3.10+ (or create .venv manually) and re-run."
+        exit 1
+    fi
+    "$PY_CMD" -m venv .venv
+fi
 
-# Give the server a head start, then open the default browser.
-sleep 2
-open "http://127.0.0.1:8050" >/dev/null 2>&1 &
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+
+export PYTHONPATH="$PROJECT_ROOT/src:${PYTHONPATH:-}"
+
+if ! "$PYTHON_BIN" - <<'PY' >/dev/null 2>&1
+import importlib
+for mod in ("sacp_suite.ui.app", "sacp_suite.api.main", "dash", "fastapi"):
+    importlib.import_module(mod)
+PY
+then
+    "$PYTHON_BIN" -m pip install -U pip
+    "$PYTHON_BIN" -m pip install -e ".[all]"
+fi
+
+start_cmd() {
+    local name="$1"
+    shift
+    nohup "$PYTHON_BIN" "$@" >"$LOG_DIR/sacp_${name}.log" 2>&1 &
+    echo $!
+}
+
+API_PID=$(start_cmd api -m sacp_suite.api.main)
+UI_PID=$(SACP_BIND=127.0.0.1 SACP_PORT=8000 SACP_UI_HOST=127.0.0.1 SACP_UI_PORT=8050 start_cmd ui -m sacp_suite.ui.app)
+
+# Wait for UI port to be reachable (API and UI share port config; UI depends on API).
+wait_for_port() {
+    local host="$1" port="$2" timeout="$3" elapsed=0
+    while [ $elapsed -lt $timeout ]; do
+        if "$PYTHON_BIN" - <<PY >/dev/null 2>&1
+import socket
+s=socket.socket()
+s.settimeout(1)
+s.connect(("$host", $port))
+s.close()
+PY
+        then
+            return 0
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+    return 1
+}
+
+if ! wait_for_port 127.0.0.1 8050 25; then
+    kill "$API_PID" "$UI_PID" >/dev/null 2>&1 || true
+    alert "SACP Suite did not start. Check logs:\nAPI: $API_LOG\nUI: $UI_LOG"
+    exit 1
+fi
+
+open "http://127.0.0.1:8050"
