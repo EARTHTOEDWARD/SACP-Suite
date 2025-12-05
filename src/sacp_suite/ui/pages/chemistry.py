@@ -9,6 +9,7 @@ from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
 
 from sacp_suite.ui.pages import register_page
+from sacp_suite.ui.pages.common import PLOTLY_DARK_LAYOUT
 
 _API_BASE = os.getenv("SACP_API_BASE_URL", "http://127.0.0.1:8000")
 _CHEM_SIM_URL = f"{_API_BASE}/api/v1/chemistry/simulate"
@@ -164,6 +165,7 @@ def register_callbacks(app):
         if meta.get("lle") is not None:
             title += f" (LLE={meta['lle']:.3g})"
 
+        fig.update_layout(**PLOTLY_DARK_LAYOUT)
         fig.update_layout(
             title=title,
             xaxis_title="t",

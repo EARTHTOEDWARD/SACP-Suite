@@ -72,7 +72,7 @@ app.layout = html.Div(
         dcc.Store(id="dataset_builder_store"),
         html.Header(
             [
-                html.H1("SACP Suite", className="sacp-title"),
+                html.H1("Strange Attractor Control Panel Suite", className="sacp-title"),
                 _navbar(),
             ],
             className="sacp-header",

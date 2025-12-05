@@ -7,7 +7,12 @@ from dash.exceptions import PreventUpdate
 import dash
 import plotly.graph_objects as go
 
-from sacp_suite.ui.pages.common import API_BASE, parse_numeric_list
+from sacp_suite.ui.pages.common import (
+    API_BASE,
+    PLOTLY_DARK_LAYOUT,
+    dark_table_style,
+    parse_numeric_list,
+)
 from sacp_suite.ui.pages import register_page
 
 API = API_BASE
@@ -66,7 +71,7 @@ def layout():
                                 {"name": "class", "id": "class_label"},
                             ],
                             page_size=10,
-                            style_table={"maxHeight": "240px", "overflowY": "auto"},
+                            **dark_table_style(),
                         ),
                         style={"paddingTop": "6px"},
                     ),

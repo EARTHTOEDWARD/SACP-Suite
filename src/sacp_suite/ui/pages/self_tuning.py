@@ -7,7 +7,7 @@ from dash import Input, Output, State, dcc, html
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
-from sacp_suite.ui.pages.common import API_BASE
+from sacp_suite.ui.pages.common import API_BASE, PLOTLY_DARK_LAYOUT
 from sacp_suite.ui.pages import register_page
 
 API = API_BASE

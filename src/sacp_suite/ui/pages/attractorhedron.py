@@ -5,7 +5,7 @@ import requests
 from dash import Input, Output, html, dcc
 import plotly.graph_objects as go
 
-from sacp_suite.ui.pages.common import API_BASE, get_shared_traj
+from sacp_suite.ui.pages.common import API_BASE, get_shared_traj, PLOTLY_DARK_LAYOUT
 from sacp_suite.ui.pages import register_page
 
 API = API_BASE
@@ -60,6 +60,7 @@ def register_callbacks(app):
         stats = ana.json()
         v2 = np.array(stats["v2_field"], dtype=float)
         fig = go.Figure(data=go.Heatmap(z=v2, colorscale="Viridis"))
+        fig.update_layout(**PLOTLY_DARK_LAYOUT)
         fig.update_layout(height=420, xaxis_title="x-bin", yaxis_title="z-bin")
         summary = f"|lambda2| = {stats['abs_lambda2']:.3f}, gamma = {stats['gamma']:.3f}"
         return summary, fig

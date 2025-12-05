@@ -10,7 +10,7 @@ from dash import ALL, Input, Output, State, dcc, html
 from dash.exceptions import PreventUpdate
 
 from sacp_suite.ui.pages import register_page
-from sacp_suite.ui.pages.common import API_BASE, set_shared_traj
+from sacp_suite.ui.pages.common import API_BASE, set_shared_traj, PLOTLY_DARK_LAYOUT
 
 API = API_BASE
 

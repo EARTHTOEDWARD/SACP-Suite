@@ -8,7 +8,7 @@ from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
 from sacp_suite.modules.fractalhedron import build_fractalhedron_k, build_symbolic_sequence, fractal_face_flags
-from sacp_suite.ui.pages.common import API_BASE, get_shared_traj, parse_label_list, parse_numeric_list
+from sacp_suite.ui.pages.common import API_BASE, get_shared_traj, parse_label_list, parse_numeric_list, PLOTLY_DARK_LAYOUT
 from sacp_suite.ui.pages import register_page
 
 API = API_BASE
@@ -149,6 +149,7 @@ def register_callbacks(app):
         qs = sorted(fh2["D_q"].keys())
         fig = go.Figure()
         fig.add_bar(x=[str(q) for q in qs], y=[fh2["D_q"][q] for q in qs], name="D_q")
+        fig.update_layout(**PLOTLY_DARK_LAYOUT)
         fig.update_layout(
             height=320,
             title="Fractal spectrum",

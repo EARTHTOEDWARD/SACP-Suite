@@ -7,7 +7,7 @@ import dash
 from dash import Input, Output, State, dcc, html
 import plotly.graph_objects as go
 
-from sacp_suite.ui.pages.common import API_BASE, set_shared_traj
+from sacp_suite.ui.pages.common import API_BASE, set_shared_traj, PLOTLY_DARK_LAYOUT
 from sacp_suite.ui.pages import register_page
 
 API = API_BASE
@@ -127,6 +127,7 @@ def register_callbacks(app):
         if rows and len(cols) >= 3:
             arr = np.array([[r.get(cols[1], 0), r.get(cols[2], 0)] for r in rows], dtype=float)
             fig.add_trace(go.Scatter(x=arr[:, 0], y=arr[:, 1], mode="markers", marker=dict(size=4)))
+            fig.update_layout(**PLOTLY_DARK_LAYOUT)
             fig.update_layout(height=360, xaxis_title=cols[1], yaxis_title=cols[2])
             if len(cols) >= 4:
                 traj_store = [[r.get(cols[1], 0), r.get(cols[2], 0), r.get(cols[3], 0)] for r in rows]

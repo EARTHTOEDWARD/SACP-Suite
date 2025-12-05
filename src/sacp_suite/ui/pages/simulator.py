@@ -7,7 +7,13 @@ from dash import Input, Output, State, dcc, html
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
-from sacp_suite.ui.pages.common import API_BASE, get_shared_traj, parse_upload, set_shared_traj
+from sacp_suite.ui.pages.common import (
+    API_BASE,
+    PLOTLY_DARK_LAYOUT,
+    get_shared_traj,
+    parse_upload,
+    set_shared_traj,
+)
 from sacp_suite.ui.pages import register_page
 
 API = API_BASE
@@ -120,12 +126,14 @@ def register_callbacks(app):
                 )
             ]
         )
+        fig3.update_layout(**PLOTLY_DARK_LAYOUT)
         fig3.update_layout(height=420, scene=dict(xaxis_title="X", yaxis_title="Y", zaxis_title="Z"))
 
         fig_ts = go.Figure()
         labels = data.get("labels", ["X", "Y", "Z"])
         for idx, label in enumerate(labels):
             fig_ts.add_trace(go.Scatter(x=time, y=traj[:, idx], name=label, mode="lines"))
+        fig_ts.update_layout(**PLOTLY_DARK_LAYOUT)
         fig_ts.update_layout(height=300, xaxis_title="t")
 
         set_shared_traj(traj)
@@ -163,6 +171,7 @@ def register_callbacks(app):
                 )
             ]
         )
+        fig3.update_layout(**PLOTLY_DARK_LAYOUT)
         fig3.update_layout(height=420, scene=dict(xaxis_title="X", yaxis_title="Y", zaxis_title="Z"))
 
         fig_ts = go.Figure()
@@ -170,6 +179,7 @@ def register_callbacks(app):
         for idx, label in enumerate(labels):
             if idx < traj.shape[1]:
                 fig_ts.add_trace(go.Scatter(x=time, y=traj[:, idx], name=label, mode="lines"))
+        fig_ts.update_layout(**PLOTLY_DARK_LAYOUT)
         fig_ts.update_layout(height=300, xaxis_title="t")
         return fig3, fig_ts, f"Shared dataset LLE (X): {lle_val:.3f}"
 

@@ -7,7 +7,7 @@ from dash import Input, Output, State, dcc, html, no_update
 from dash.exceptions import PreventUpdate
 
 from sacp_suite.ui.pages import register_page
-from sacp_suite.ui.pages.common import API_BASE, set_shared_traj
+from sacp_suite.ui.pages.common import API_BASE, set_shared_traj, PLOTLY_DARK_LAYOUT
 
 API = API_BASE
 
@@ -326,6 +326,7 @@ def register_callbacks(app):
                     )
                 ]
             )
+            fig.update_layout(**PLOTLY_DARK_LAYOUT)
             fig.update_layout(
                 title=f"Bifurcation vs {x_label}",
                 xaxis_title=x_label,

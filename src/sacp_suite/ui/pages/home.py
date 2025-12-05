@@ -8,28 +8,27 @@ import requests
 from dash import Input, Output, State, dash_table, dcc, html
 from dash.exceptions import PreventUpdate
 
-from sacp_suite.ui.pages.common import API_BASE, parse_numeric_list
+from sacp_suite.ui.pages.common import API_BASE, dark_table_style, parse_numeric_list
 from sacp_suite.ui.pages import register_page
 
 API = API_BASE
 
 
 def layout():
+    table_style = dark_table_style()
     preview_table = dash_table.DataTable(
         id="preview_table",
         data=[],
         columns=[{"name": c, "id": c} for c in ["t", "x", "y", "z", "u1"]],
         page_size=10,
-        style_table={"maxHeight": "240px", "overflowY": "auto"},
-        style_cell={"fontFamily": "JetBrains Mono, Menlo, monospace", "textAlign": "left"},
+        **table_style,
     )
     dataset_table = dash_table.DataTable(
         id="dataset_preview_table",
         data=[],
         columns=[{"name": c, "id": c} for c in ["t", "x", "y", "z", "u1"]],
         page_size=6,
-        style_table={"maxHeight": "200px", "overflowY": "auto"},
-        style_cell={"fontFamily": "JetBrains Mono, Menlo, monospace", "textAlign": "left"},
+        **table_style,
     )
 
     return html.Div(

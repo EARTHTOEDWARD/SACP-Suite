@@ -6,7 +6,7 @@ from dash import Input, Output, html, dcc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
-from sacp_suite.ui.pages.common import API_BASE, get_shared_traj
+from sacp_suite.ui.pages.common import API_BASE, get_shared_traj, PLOTLY_DARK_LAYOUT
 from sacp_suite.ui.pages import register_page
 
 API = API_BASE
@@ -56,6 +56,7 @@ def register_callbacks(app):
         fig = go.Figure()
         if sec.size:
             fig.add_trace(go.Scatter(x=sec[:, 0], y=sec[:, 1], mode="markers", marker=dict(size=5)))
+        fig.update_layout(**PLOTLY_DARK_LAYOUT)
         fig.update_layout(height=360, xaxis_title="X", yaxis_title="Z")
         return fig, f"Section points: {data.get('count', 0)}", note
 
