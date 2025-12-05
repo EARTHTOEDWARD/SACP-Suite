@@ -31,6 +31,8 @@ class DatasetInfo:
     columns: List[str]
     count_hint: int | None = None
     source: str | None = None
+    license: str | None = None
+    pii_safe: bool | None = None
 
 
 def _load_manifest() -> list[DatasetInfo]:
@@ -49,6 +51,8 @@ def _load_manifest() -> list[DatasetInfo]:
                 columns=item.get("columns", []),
                 count_hint=item.get("count_hint"),
                 source=item.get("source"),
+                license=item.get("license"),
+                pii_safe=item.get("pii_safe"),
             )
         )
     return out
@@ -97,6 +101,8 @@ def _load_uploads() -> list[DatasetInfo]:
                 columns=item.get("columns", []),
                 count_hint=item.get("count_hint"),
                 source=item.get("source", "upload"),
+                license=item.get("license"),
+                pii_safe=item.get("pii_safe"),
             )
         )
     return out

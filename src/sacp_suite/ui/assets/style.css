@@ -36,6 +36,80 @@ body {
   text-decoration: underline;
 }
 
+.sacp-navbar .nav-secondary {
+  margin-left: auto;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.sacp-navbar .nav-secondary:hover {
+  background: #e9efff;
+  text-decoration: none;
+}
+
+.sacp-page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.explainer {
+  background: #eef2ff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.explainer summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--nav);
+}
+
+.explainer summary::-webkit-details-marker {
+  display: none;
+}
+
+.explainer-lede {
+  margin: 6px 0;
+  color: var(--text);
+  font-size: 0.96rem;
+}
+
+.explainer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.explainer-section {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.93rem;
+}
+
+.explainer-section ul {
+  margin: 6px 0 0 16px;
+  padding: 0;
+}
+
+.explainer-section li {
+  margin-bottom: 4px;
+  color: var(--muted);
+}
+
+.explainer-hint {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);

@@ -122,6 +122,8 @@ def bootstrap_pages() -> None:
     module_names = [
         "home",
         "simulator",
+        "strange_attractors",
+        "dataset_agent",
         "sheaf",
         "attractorhedron",
         "fractal_llm",
@@ -130,9 +132,11 @@ def bootstrap_pages() -> None:
         "self_tuning",
         "bcp",
         "abtc",
+        "adr",
         "datasets",
         "chemistry",
         "frac_chem_sprott",
+        "bouquet",
     ]
 
     enabled_env = os.getenv("SACP_ENABLED_PAGES")

@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from sacp_suite.api.v1 import auth, datasets as v1_datasets, jobs as v1_jobs, workspaces
-from sacp_suite.api.v1 import chemistry
+from sacp_suite.api.v1 import bouquet, chemistry
 from sacp_suite.api.v1 import frac_chem_sprott
 from sacp_suite.core.datasets import list_datasets, preview_dataset, register_upload
 from sacp_suite.core.plugin_api import registry
@@ -53,6 +53,7 @@ from sacp_suite.modules.sacp_x import lorenz63 as _lorenz  # noqa: F401  (regist
 from sacp_suite.modules.sacp_x.lorenz63 import Lorenz63
 from sacp_suite.modules.sacp_x.metrics import rosenstein_lle
 from sacp_suite.modules.sacp_x.sheaf import lorenz_attractor_sheaf
+from sacp_suite.modules import strange_attractors
 
 
 def _bool_env(name: str, default: bool) -> bool:
@@ -83,6 +84,8 @@ app.include_router(v1_datasets.router)
 app.include_router(v1_jobs.router)
 app.include_router(chemistry.router, prefix="/api/v1")
 app.include_router(frac_chem_sprott.router, prefix="/api/v1")
+app.include_router(bouquet.router, prefix="/api/v1")
+app.include_router(bouquet.router, prefix="/api/v1")
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 INGESTION_CONFIG_PATH = ROOT_DIR / "configs" / "ingestion.yaml"
@@ -284,6 +287,7 @@ class SimRequest(BaseModel):
     params: dict = Field(default_factory=dict)
     T: float = 50.0
     dt: float = 0.01
+    x0: Optional[List[float]] = None
 
 
 class SimResult(BaseModel):
@@ -328,6 +332,19 @@ class DCRCRequest(BaseModel):
     num_reservoirs: int = 3
     coupling: float = 1.0
     timesteps: int = 1000
+
+
+class CompositeSystem(BaseModel):
+    model: str
+    params: dict = Field(default_factory=dict)
+    x0: Optional[List[float]] = None
+
+
+class CompositeSimRequest(BaseModel):
+    systems: List[CompositeSystem]
+    T: float = 50.0
+    dt: float = 0.01
+    coupling: float = 0.05
 
 
 class SectionRequest(BaseModel):
@@ -386,6 +403,13 @@ class DatasetUploadRequest(BaseModel):
     description: str = ""
     contents_b64: str
     columns: List[str] = Field(default_factory=list)
+
+
+EXTERNAL_REGISTRY_STUBS = [
+    {"id": "physionet_stub", "name": "PhysioNet ICU waveforms (placeholder)", "license": "varies", "pii_safe": False, "modality": "time_series", "domain": "clinical"},
+    {"id": "uci_stub", "name": "UCI synthetic control (placeholder)", "license": "varies", "pii_safe": True, "modality": "time_series", "domain": "control"},
+    {"id": "finance_stub", "name": "Public finance API (placeholder)", "license": "varies", "pii_safe": False, "modality": "time_series", "domain": "finance"},
+]
 
 
 class MemoryExperimentRequest(BaseModel):
@@ -542,12 +566,65 @@ def health():
     return {"ok": True, "models": registry.list_dynamics()}
 
 
+@app.get("/attractors")
+def list_attractors_api():
+    """Return metadata for available strange attractors (equations + parameter ranges)."""
+    return {"attractors": strange_attractors.list_attractors()}
+
+
 @app.post("/simulate", response_model=SimResult)
 def simulate(req: SimRequest):
     dyn = registry.create_dynamics(req.model, **req.params)
-    traj = dyn.simulate(T=req.T, dt=req.dt)
+    x0 = np.array(req.x0, dtype=float) if req.x0 else None
+    traj = dyn.simulate(T=req.T, dt=req.dt, x0=x0)
     t = [i * req.dt for i in range(traj.shape[0])]
     return {"time": t, "trajectory": traj.tolist(), "labels": dyn.state_labels}
+
+
+@app.post("/simulate/composite")
+def simulate_composite(req: CompositeSimRequest):
+    if not req.systems:
+        raise HTTPException(status_code=400, detail="systems must be non-empty")
+    dyns = []
+    states = []
+    labels: List[str] = []
+    for sys in req.systems:
+        dyn = registry.create_dynamics(sys.model, **(sys.params or {}))
+        dyns.append(dyn)
+        x0 = np.array(sys.x0, dtype=float) if sys.x0 is not None else dyn.default_state()
+        states.append(x0.copy())
+        if not labels:
+            labels = dyn.state_labels
+
+    n = int(max(req.T / req.dt, 1))
+    trajs = [np.zeros((n, s.shape[0]), dtype=float) for s in states]
+    coupling = float(req.coupling)
+
+    for i in range(n):
+        # record current
+        for idx, s in enumerate(states):
+            trajs[idx][i] = s
+        # compute coupling term once
+        stack = np.stack(states, axis=0)
+        sum_states = np.sum(stack, axis=0)
+        new_states = []
+        for idx, (dyn, s) in enumerate(zip(dyns, states)):
+            base = dyn.derivative(s)
+            # diffusive all-to-all coupling
+            others = sum_states - s
+            coupling_term = coupling * (others - (len(states) - 1) * s)
+            ds = base + coupling_term
+            new_states.append(s + req.dt * ds)
+        states = new_states
+
+    time = [i * req.dt for i in range(n)]
+    return {
+        "time": time,
+        "trajectories": [t.tolist() for t in trajs],
+        "labels": labels,
+        "coupling": coupling,
+        "systems": [s.model_dump() for s in req.systems],
+    }
 
 
 def _load_krebs_mod():
@@ -923,6 +1000,8 @@ def datasets_list():
                 "columns": ds.columns,
                 "estimate": ds.count_hint,
                 "source": ds.source,
+                "license": ds.license,
+                "pii_safe": ds.pii_safe,
             }
         )
     return {"datasets": out}
@@ -932,6 +1011,11 @@ def datasets_list():
 def datasets_preview(req: DatasetPreviewRequest):
     data = preview_dataset(req.dataset_id, limit=min(req.limit, 5000))
     return data
+
+
+@app.get("/datasets/registry")
+def datasets_registry():
+    return {"external": EXTERNAL_REGISTRY_STUBS}
 
 
 @app.post("/datasets/upload")

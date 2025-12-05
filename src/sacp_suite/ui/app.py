@@ -7,6 +7,7 @@ import os
 from dash import Dash, Input, Output, dcc, html
 
 from sacp_suite.ui.pages import bootstrap_pages, find_page_by_path, get_pages, wire_callbacks
+from sacp_suite.ui.pages.explainers import explainer_component
 
 
 def _create_app() -> Dash:
@@ -32,7 +33,9 @@ wire_callbacks(app)
 
 
 def _navbar():
-    pages = get_pages()
+    all_pages = get_pages()
+    pages = [p for p in all_pages if p.id != "datasets"]
+    dataset_page = next((p for p in all_pages if p.id == "datasets"), None)
     links = []
     for page in pages:
         links.append(
@@ -40,6 +43,16 @@ def _navbar():
                 page.name,
                 href=page.path,
                 className="nav-link",
+            )
+        )
+    if dataset_page is not None:
+        links.append(
+            dcc.Link(
+                dataset_page.name,
+                href=dataset_page.path,
+                className="nav-link nav-secondary",
+                title="Datasets workspace",
+                style={"marginLeft": "auto"},
             )
         )
     return html.Div(
@@ -83,7 +96,11 @@ def _render_page(pathname: str):
         )
 
     try:
-        return page.layout()
+        content = page.layout()
+        explainer = explainer_component(page.id)
+        if explainer is not None:
+            return html.Div([explainer, content], className="sacp-page-shell")
+        return content
     except Exception as exc:  # noqa: BLE001
         from sacp_suite.ui.pages import _error_layout  # type: ignore[attr-defined]
 
