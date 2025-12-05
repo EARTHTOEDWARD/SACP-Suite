@@ -9,7 +9,7 @@ from dash import Input, Output, State, dcc, html, ALL
 from dash.exceptions import PreventUpdate
 
 from sacp_suite.ui.pages import register_page
-from sacp_suite.ui.pages.common import API_BASE, set_shared_traj
+from sacp_suite.ui.pages.common import API_BASE, set_shared_traj, PLOTLY_DARK_LAYOUT, colab_launch_url
 
 API = API_BASE
 
@@ -140,15 +140,16 @@ def layout():
                 className="card",
                 style={"marginTop": "12px"},
             ),
-            html.Div(
-                [
-                    html.H4("Preview + quick health", className="section-title"),
-                    dcc.Loading(dcc.Graph(id="da_preview_fig"), type="dot"),
-                    html.Div(id="da_preview_meta", className="status-text", style={"marginTop": "6px"}),
-                ],
-                className="card",
-                style={"marginTop": "12px"},
-            ),
+                    html.Div(
+                        [
+                            html.H4("Preview + quick health", className="section-title"),
+                            dcc.Loading(dcc.Graph(id="da_preview_fig"), type="dot"),
+                            html.Div(id="da_preview_meta", className="status-text", style={"marginTop": "6px"}),
+                            html.Div(id="da_remote_hint", className="status-text", style={"marginTop": "6px"}),
+                        ],
+                        className="card",
+                        style={"marginTop": "12px"},
+                    ),
         ]
     )
 
@@ -348,6 +349,7 @@ def register_callbacks(app):
         Output("da_preview_fig", "figure", allow_duplicate=True),
         Output("da_preview_meta", "children", allow_duplicate=True),
         Output("da_candidate_status", "children", allow_duplicate=True),
+        Output("da_remote_hint", "children", allow_duplicate=True),
         Output("shared_traj", "data", allow_duplicate=True),
         Input({"type": "da-preview-btn", "dsid": ALL}, "n_clicks"),
         State("da_candidates", "data"),
@@ -366,13 +368,19 @@ def register_callbacks(app):
             raise PreventUpdate
         target = next((c for c in candidates if c.get("id") == dsid), None)
         if not target or target.get("kind") != "internal":
-            return dash.no_update, "External stub: connect registry search to enable preview.", dash.no_update, dash.no_update
+            return (
+                dash.no_update,
+                "External stub: connect registry search to enable preview.",
+                dash.no_update,
+                dash.no_update,
+                dash.no_update,
+            )
         try:
             resp = requests.post(f"{API}/datasets/preview", json={"dataset_id": dsid, "limit": 1500}, timeout=30)
             resp.raise_for_status()
             data = resp.json()
         except Exception as exc:  # noqa: BLE001
-            return dash.no_update, f"Preview failed: {exc}", dash.no_update, dash.no_update
+            return dash.no_update, f"Preview failed: {exc}", dash.no_update, dash.no_update, dash.no_update
 
         rows = data.get("rows", [])
         columns = data.get("columns", [])
@@ -397,14 +405,26 @@ def register_callbacks(app):
             x = [r.get(columns[0], 0) for r in rows]
             y = [r.get(columns[1], 0) for r in rows]
             fig.add_trace(go.Scatter(x=x, y=y, mode="markers", marker=dict(size=4)))
+            fig.update_layout(**PLOTLY_DARK_LAYOUT)
             fig.update_layout(height=320, xaxis_title=columns[0], yaxis_title=columns[1])
         meta = f"{target.get('name', dsid)} — {target.get('license', '')}; {health}{lle_txt}"
+        remote_hint = dash.no_update
+        total_est = data.get("total_estimate") or len(rows)
+        if isinstance(total_est, (int, float)) and total_est >= 200000:
+            url = colab_launch_url()
+            remote_hint = html.Div(
+                [
+                    html.Span("Large dataset detected. Consider using remote GPU via Colab: "),
+                    html.A("Open in Colab", href=url, target="_blank", rel="noopener"),
+                    html.Span(" (paste your API token in the notebook)."),
+                ]
+            )
         if traj:
             set_shared_traj(traj)
             status = f"Previewed {dsid}; shared trajectory ready (first 3 dims)."
         else:
             status = f"Previewed {dsid}; not enough dims to share."
-        return fig, meta, status, traj or dash.no_update
+        return fig, meta, status, remote_hint, traj or dash.no_update
 
 register_page(
     "dataset_agent",
