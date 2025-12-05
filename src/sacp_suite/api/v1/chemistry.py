@@ -17,8 +17,12 @@ class ADRSimulationParams(BaseModel):
 
     t_max: float = Field(500.0, description="Total simulation time")
     dt: float = Field(0.01, description="Time step (used for metadata only)")
-    initial_state: List[float] = Field(
-        ..., description="Initial state vector for the ADR system (optional; length must match model)"
+    initial_state: Optional[List[float]] = Field(
+        None,
+        description=(
+            "Optional initial state vector for the ADR system. "
+            "Length can be the full packed state or Vmem-per-tile (defaults to healthy state when omitted)."
+        ),
     )
     mode: str = Field("wound", description="Which experiment to run (currently: 'wound')")
 
@@ -48,10 +52,35 @@ def _run_adr_simulation(params: ADRSimulationParams) -> Tuple[List[float], List[
     try:
         t_wound = params.t_max / 2.0
         t_final = params.t_max
+        adr_params = adr_bioelectric.ADRBioelectricParams()
+
+        user_state = np.asarray(params.initial_state, dtype=float) if params.initial_state else None
+        y0 = None
+        if user_state is not None:
+            expected_full = (3 * adr_bioelectric.N_SITES + 4) * adr_bioelectric.N_TILES
+            expected_vmem = adr_bioelectric.N_TILES
+            if user_state.size == expected_full:
+                y0 = user_state.reshape(-1)
+            elif user_state.size == expected_vmem:
+                # Map Vmem-per-tile seed onto the full state while keeping defaults for other variables.
+                base_state = adr_bioelectric.make_initial_state(adr_params, mode="healthy")
+                x, v, r, h1, h4, gamma1, eta = adr_bioelectric.unpack_state(base_state)
+                x[0, :] = user_state
+                y0 = adr_bioelectric.pack_state(x, v, r, h1, h4, gamma1, eta)
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"initial_state length must be either {expected_vmem} (Vmem per tile) "
+                        f"or {expected_full} (full packed state); got {user_state.size}"
+                    ),
+                )
+
         t_arr, V_traj, _ = adr_bioelectric.run_experiment_wound(
-            params=adr_bioelectric.ADRBioelectricParams(),
+            params=adr_params,
             t_wound=t_wound,
             t_final=t_final,
+            y0=y0,
         )
         # V_traj shape: (N_TILES, T); transpose so API returns time-major [T][state]
         x_time_major = np.asarray(V_traj, dtype=float).T.tolist()

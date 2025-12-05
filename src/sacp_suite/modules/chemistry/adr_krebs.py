@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as dataclass_replace
 from typing import Optional, Sequence, Tuple, Dict
 
 import numpy as np
@@ -64,7 +64,7 @@ class KrebsADRConfig:
 SITE_NAMES = ["TCA_flux", "NADH_ratio", "DeltaPsi", "ATP_ratio"]
 
 
-def make_krebs_adr(alpha: float = 1.0, cfg: Optional[KrebsADRConfig] = None) -> InstrumentedADR:
+def make_krebs_adr(alpha: float = 1.0, cfg: Optional[KrebsADRConfig] = None, **overrides) -> InstrumentedADR:
     """
     Build an InstrumentedADR configured as an ADR–Krebs surrogate.
 
@@ -75,9 +75,13 @@ def make_krebs_adr(alpha: float = 1.0, cfg: Optional[KrebsADRConfig] = None) -> 
         alpha = 1.0 is a reference regime.
     cfg : KrebsADRConfig or None
         Optional config; if None, uses defaults.
+    overrides : dict
+         Optional overrides for KrebsADRConfig fields (e.g., dt, seed).
     """
     if cfg is None:
         cfg = KrebsADRConfig()
+    if overrides:
+        cfg = dataclass_replace(cfg, **overrides)
 
     a = np.array([cfg.a_TCA, cfg.a_NADH, cfg.a_dPsi, cfg.a_ATP], dtype=float)
     gamma = np.array([cfg.gamma_TCA, cfg.gamma_NADH, cfg.gamma_dPsi, cfg.gamma_ATP], dtype=float)
@@ -183,4 +187,3 @@ def krebs_bifurcation_scan(
         x_samples.extend(x_site.tolist())
 
     return np.asarray(all_alphas), np.asarray(x_samples)
-

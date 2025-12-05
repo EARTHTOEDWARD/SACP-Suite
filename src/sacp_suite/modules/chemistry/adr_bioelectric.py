@@ -9,7 +9,7 @@ Dependencies: numpy, scipy.integrate.solve_ivp
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import numpy as np
 from scipy.integrate import solve_ivp
 
@@ -21,10 +21,10 @@ N_SITES = 4  # sites per tile: 0 Vmem, 1 channels, 2 pumps, 3 morph program
 @dataclass
 class ADRBioelectricParams:
     # Local double-well coefficients per site
-    a: np.ndarray = np.array([1.0, 0.9, 0.8, 0.7], dtype=float)
+    a: np.ndarray = field(default_factory=lambda: np.array([1.0, 0.9, 0.8, 0.7], dtype=float))
 
     # Base damping per site (site 0 uses gamma1[j], others use base)
-    gamma_base: np.ndarray = np.array([0.25, 0.25, 0.25, 0.25], dtype=float)
+    gamma_base: np.ndarray = field(default_factory=lambda: np.array([0.25, 0.25, 0.25, 0.25], dtype=float))
 
     # Ring coupling inside each tile
     k_ring: float = 0.2
@@ -557,7 +557,12 @@ def run_experiment_negative_island(params: ADRBioelectricParams | None = None, s
     return t, V_traj, sol
 
 
-def run_experiment_wound(params: ADRBioelectricParams | None = None, t_wound: float = 200.0, t_final: float = 500.0):
+def run_experiment_wound(
+    params: ADRBioelectricParams | None = None,
+    t_wound: float = 200.0,
+    t_final: float = 500.0,
+    y0: np.ndarray | None = None,
+):
     """Wound + repair experiment: scramble center tiles then self-tune back."""
     if params is None:
         params = ADRBioelectricParams()
@@ -565,7 +570,15 @@ def run_experiment_wound(params: ADRBioelectricParams | None = None, t_wound: fl
     # If caller passed in a params with scalar targets, ensure arrays are set up
     params.__post_init__()
 
-    y0 = make_initial_state(params, mode="healthy")
+    if y0 is None:
+        y0 = make_initial_state(params, mode="healthy")
+    else:
+        y0 = np.asarray(y0, dtype=float)
+        expected_len = (3 * N_SITES + 4) * N_TILES
+        if y0.size != expected_len:
+            raise ValueError(f"Initial state must have length {expected_len}; got {y0.size}")
+        y0 = y0.reshape(-1)
+
     control_zero = lambda t: np.zeros((N_SITES, N_TILES))  # noqa: E731
     sol1 = integrate_with_clipping(y0, (0.0, t_wound), params, control_zero)
 

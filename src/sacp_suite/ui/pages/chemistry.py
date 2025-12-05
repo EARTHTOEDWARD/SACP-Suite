@@ -46,11 +46,12 @@ def layout():
                     ),
                     html.Div(
                         [
-                            html.Label("Initial state (comma-separated floats)"),
+                            html.Label("Initial state (optional, comma-separated floats)"),
                             dcc.Input(
                                 id="chemistry-initial",
                                 type="text",
-                                value="0.0, 0.1, -0.2",
+                                value="",
+                                placeholder="e.g. 0.0, 0.1, -0.2",
                                 style={"width": "100%"},
                             ),
                         ],
@@ -120,19 +121,22 @@ def register_callbacks(app):
         if not n_clicks:
             raise PreventUpdate
 
-        if t_max is None or dt is None or not initial_raw:
-            return no_update, "Please fill in t_max, dt and initial state."
+        if t_max is None or dt is None:
+            return no_update, "Please fill in t_max and dt."
 
-        try:
-            initial_state = _parse_initial_state(initial_raw)
-        except Exception as exc:  # noqa: BLE001
-            return no_update, f"Could not parse initial state: {exc}"
+        initial_state = None
+        if initial_raw:
+            try:
+                initial_state = _parse_initial_state(initial_raw)
+            except Exception as exc:  # noqa: BLE001
+                return no_update, f"Could not parse initial state: {exc}"
 
         payload = {
             "t_max": t_max,
             "dt": dt,
-            "initial_state": initial_state,
         }
+        if initial_state is not None:
+            payload["initial_state"] = initial_state
 
         try:
             t, x, meta = _call_chemistry_api(payload)

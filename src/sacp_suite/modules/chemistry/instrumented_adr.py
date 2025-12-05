@@ -44,41 +44,41 @@ def _decorrelation_time(x: np.ndarray, dt: float) -> float:
     return float(lag * dt)
 
 
-def compute_clc_proxy(log: Dict[str, np.ndarray], dt: float) -> Tuple[np.ndarray, float, Dict[str, float]]:
+def compute_clc_proxy(log: Dict[str, np.ndarray], dt: float) -> Tuple[np.ndarray, float, Dict[str, np.ndarray]]:
     """
-    Compute a small set of CLC-style diagnostics from an ADR log.
+    Compute CLC-style diagnostics from an ADR log.
 
-    Returns
-    -------
-    S_node : np.ndarray
-        Normalized entropy per site.
-    S_ring : float
-        Mean entropy across the ring.
-    diag : dict
-        Contains C_inf, tau_past, tau_future, R_spatial.
+    Contract (Metabolism Atlas compatible):
+      - Input: log dict with x (T,N) at minimum; dt in seconds.
+      - Output: S_node array-like (len N), S_ring scalar, diag dict of array-like.
     """
     X = np.asarray(log["x"])
-    R = np.asarray(log["r"])
     N = X.shape[1]
 
     entropies = np.array([_normalized_entropy(X[:, i]) for i in range(N)], dtype=float)
     taus = np.array([_decorrelation_time(X[:, i], dt) for i in range(N)], dtype=float)
 
-    # Spatial correlation between sites as a coupling proxy
+    # Spatial reach: mean absolute correlation to other sites (per-site).
     if N > 1:
         corr = np.corrcoef(X.T)
-        upper = corr[np.triu_indices(N, k=1)]
-        spatial = float(np.nanmean(np.abs(upper))) if upper.size else 0.0
+        R_spatial = np.zeros(N, dtype=float)
+        for i in range(N):
+            others = np.delete(np.abs(corr[i]), i)
+            R_spatial[i] = float(np.nanmean(others)) if others.size else 0.0
     else:
-        spatial = 0.0
+        R_spatial = np.zeros(N, dtype=float)
 
-    S_node = entropies
-    S_ring = float(np.mean(entropies))
+    C_inf = entropies  # use entropy as a capture proxy per site
+    tau_past = taus
+    tau_future = taus
+
+    S_node = C_inf * np.sqrt(tau_past * tau_future) * np.maximum(R_spatial, 1e-8)
+    S_ring = float(np.mean(S_node))
     diag = {
-        "C_inf": float(np.mean(entropies)),
-        "tau_past": float(np.mean(taus)),
-        "tau_future": float(np.mean(taus)),
-        "R_spatial": spatial,
+        "C_inf": C_inf,
+        "tau_past": tau_past,
+        "tau_future": tau_future,
+        "R_spatial": R_spatial,
     }
     return S_node, S_ring, diag
 
